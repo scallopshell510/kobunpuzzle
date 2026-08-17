@@ -107,7 +107,7 @@ final List<AuxiliaryVerb> allVerbs = [
     meanings: ['過去', '詠嘆'],
   ),
   AuxiliaryVerb(
-    connection: '連用形', base: 'たり', type: 'ラ変型',
+    connection: '連用形', base: 'たり（完了・存続）', type: 'ラ変型',
     forms: {'未然': 'たら', '連用': 'たり', '終止': 'たり', '連体': 'たる', '已然': 'たれ', '命令': 'たれ'},
     meanings: ['完了', '存続'],
   ),
@@ -149,7 +149,7 @@ final List<AuxiliaryVerb> allVerbs = [
     meanings: ['推定', '婉曲'],
   ),
   AuxiliaryVerb(
-    connection: '終止形', base: 'なり', type: 'ラ変型',
+    connection: '終止形', base: 'なり（伝聞・推定）', type: 'ラ変型',
     forms: {'未然': '○', '連用': 'なり', '終止': 'なり', '連体': 'なる', '已然': 'なれ', '命令': '○'},
     meanings: ['推定', '伝聞'],
   ),
@@ -178,12 +178,12 @@ final List<AuxiliaryVerb> allVerbs = [
     meanings: ['推打\n量消', '意打\n志消', '不可能', '当打\n然消', '・不\n禁適\n止当'],
   ),
   AuxiliaryVerb(
-    connection: '体言/連体形', base: 'なり', type: '形容動詞型',
+    connection: '体言/連体形', base: 'なり（断定・存在）', type: '形容動詞型',
     forms: {'未然': 'なら', '連用': '／な\nにり', '終止': 'なり', '連体': 'なる', '已然': 'なれ', '命令': 'なれ'},
     meanings: ['断定', '存在'],
   ),
   AuxiliaryVerb(
-    connection: '体言/連体形', base: 'たり', type: '形容動詞型',
+    connection: '体言/連体形', base: 'たり（断定）', type: '形容動詞型',
     forms: {'未然': 'たら', '連用': '／た\nとり', '終止': 'たり', '連体': 'たる', '已然': 'たれ', '命令': 'たれ'},
     meanings: ['断定'],
   ),
