@@ -22,6 +22,10 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
   final Map<String, String> _correctFormAnswers = {};
   late List<String> _remainingPieces;
 
+  // タップ選択用の状態管理
+  String? _selectedPiece;
+  int? _selectedPieceIndex;
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +35,8 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
   void _initGameData() {
     _userAnswers.clear();
     _correctFormAnswers.clear();
+    _selectedPiece = null;
+    _selectedPieceIndex = null;
     List<String> pieces = [];
 
     for (int i = 0; i < widget.verbs.length; i++) {
@@ -131,6 +137,60 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
     return text.split('').join('\n');
   }
 
+  // 活用形セルのタップ処理
+  void _onTapFormCell({required String key, required String correctVal}) {
+    if (_selectedPiece == null) return;
+
+    if (_selectedPiece == correctVal) {
+      setState(() {
+        _userAnswers[key] = _selectedPiece;
+        _remainingPieces.removeAt(_selectedPieceIndex!);
+        _selectedPiece = null;
+        _selectedPieceIndex = null;
+      });
+      _checkCompletion();
+    } else {
+      _showWrongFeedback();
+    }
+  }
+
+  // 意味セルのタップ処理
+  void _onTapMeaningCell({
+    required String key,
+    required int vIndex,
+    required List<String> validMeanings,
+  }) {
+    if (_selectedPiece == null) return;
+
+    List<String?> currentPlacedList = List.generate(
+      validMeanings.length,
+      (i) => _userAnswers['meaning_${vIndex}_$i'],
+    );
+
+    if (validMeanings.contains(_selectedPiece) &&
+        !currentPlacedList.contains(_selectedPiece)) {
+      setState(() {
+        _userAnswers[key] = _selectedPiece;
+        _remainingPieces.removeAt(_selectedPieceIndex!);
+        _selectedPiece = null;
+        _selectedPieceIndex = null;
+      });
+      _checkCompletion();
+    } else {
+      _showWrongFeedback();
+    }
+  }
+
+  void _showWrongFeedback() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('違います！正しい場所をタップしてください'),
+        duration: Duration(milliseconds: 600),
+        backgroundColor: Colors.redAccent,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     String modeName = widget.mode == PuzzleMode.formsOnly
@@ -152,89 +212,107 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: InteractiveViewer(
-              constrained: false,
-              scaleEnabled: true,
-              minScale: 0.3,
-              maxScale: 2.5,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Table(
-                  defaultColumnWidth: const FixedColumnWidth(65),
-                  border: TableBorder.all(color: Colors.black87, width: 1),
-                  children: [
-                    // ヘッダー1: 接続
-                    TableRow(
-                      decoration: const BoxDecoration(color: Color(0xFFE8E2D5)),
-                      children: [
-                        _buildCell('接続', isHeader: true),
-                        ...widget.verbs.map((v) =>
-                            _buildCell(v.connection, isHeader: true, fontSize: 10)),
-                      ],
-                    ),
-                    // ヘッダー2: 基本形
-                    TableRow(
-                      decoration: const BoxDecoration(color: Color(0xFFF0CB85)),
-                      children: [
-                        _buildCell('基本形', isHeader: true),
-                        ...widget.verbs.map((v) =>
-                            _buildCell(v.base, isHeader: true, isBold: true, fontSize: 14)),
-                      ],
-                    ),
-                    // 活用形行（未然〜命令）
-                    ..._formNames.map((formName) {
-                      return TableRow(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: InteractiveViewer(
+                constrained: false,
+                scaleEnabled: true,
+                minScale: 0.3,
+                maxScale: 2.5,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Table(
+                    defaultColumnWidth: const FixedColumnWidth(65),
+                    border: TableBorder.all(color: Colors.black87, width: 1),
+                    children: [
+                      // ヘッダー1: 接続
+                      TableRow(
+                        decoration: const BoxDecoration(color: Color(0xFFE8E2D5)),
                         children: [
-                          Container(
-                            color: const Color(0xFFC84B31),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            alignment: Alignment.center,
-                            child: Text(
-                              _toVerticalText(formName),
-                              style: const TextStyle(
-                                  color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          ...List.generate(widget.verbs.length, (vIndex) {
-                            String formVal = widget.verbs[vIndex].forms[formName] ?? '○';
-
-                            if (widget.mode == PuzzleMode.meaningOnly) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                constraints: const BoxConstraints(minHeight: 65),
-                                color: Colors.white,
-                                child: Center(
-                                  child: Text(_toVerticalText(formVal),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(fontSize: 11, height: 1.05)),
-                                ),
-                              );
-                            }
-
-                            String key = 'form_${vIndex}_$formName';
-                            return _buildFormDropTargetCell(key: key, correctVal: formVal);
-                          }),
+                          _buildCell('接続', isHeader: true),
+                          ...widget.verbs.map((v) =>
+                              _buildCell(v.connection, isHeader: true, fontSize: 10)),
                         ],
-                      );
-                    }),
-                    // フッター: 意味
-                    TableRow(
-                      decoration: const BoxDecoration(color: Color(0xFFE8E2D5)),
-                      children: [
-                        _buildCell('意味', isHeader: true),
-                        ...List.generate(widget.verbs.length, (vIndex) {
-                          List<String> validMeanings = widget.verbs[vIndex].meanings;
+                      ),
+                      // ヘッダー2: 基本形
+                      TableRow(
+                        decoration: const BoxDecoration(color: Color(0xFFF0CB85)),
+                        children: [
+                          _buildCell('基本形', isHeader: true),
+                          ...widget.verbs.map((v) =>
+                              _buildCell(v.base, isHeader: true, isBold: true, fontSize: 14)),
+                        ],
+                      ),
+                      // 活用形行（未然〜命令）
+                      ..._formNames.map((formName) {
+                        return TableRow(
+                          children: [
+                            Container(
+                              color: const Color(0xFFC84B31),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              alignment: Alignment.center,
+                              child: Text(
+                                _toVerticalText(formName),
+                                style: const TextStyle(
+                                    color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            ...List.generate(widget.verbs.length, (vIndex) {
+                              String formVal = widget.verbs[vIndex].forms[formName] ?? '○';
 
-                          return Column(
-                            children: List.generate(validMeanings.length, (mIndex) {
-                              String key = 'meaning_${vIndex}_$mIndex';
-
-                              if (widget.mode == PuzzleMode.formsOnly) {
+                              if (widget.mode == PuzzleMode.meaningOnly) {
                                 return Container(
                                   padding: const EdgeInsets.symmetric(vertical: 4),
+                                  constraints: const BoxConstraints(minHeight: 65),
+                                  color: Colors.white,
+                                  child: Center(
+                                    child: Text(_toVerticalText(formVal),
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(fontSize: 11, height: 1.05)),
+                                  ),
+                                );
+                              }
+
+                              String key = 'form_${vIndex}_$formName';
+                              return _buildFormCell(key: key, correctVal: formVal);
+                            }),
+                          ],
+                        );
+                      }),
+                      // フッター: 意味
+                      TableRow(
+                        decoration: const BoxDecoration(color: Color(0xFFE8E2D5)),
+                        children: [
+                          _buildCell('意味', isHeader: true),
+                          ...List.generate(widget.verbs.length, (vIndex) {
+                            List<String> validMeanings = widget.verbs[vIndex].meanings;
+
+                            return Column(
+                              children: List.generate(validMeanings.length, (mIndex) {
+                                String key = 'meaning_${vIndex}_$mIndex';
+
+                                if (widget.mode == PuzzleMode.formsOnly) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: Colors.black26,
+                                          width: mIndex == validMeanings.length - 1 ? 0 : 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(_toVerticalText(validMeanings[mIndex]),
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(fontSize: 10, height: 1.05)),
+                                    ),
+                                  );
+                                }
+
+                                return Container(
                                   decoration: BoxDecoration(
                                     border: Border(
                                       bottom: BorderSide(
@@ -243,135 +321,127 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
                                       ),
                                     ),
                                   ),
-                                  child: Center(
-                                    child: Text(_toVerticalText(validMeanings[mIndex]),
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(fontSize: 10, height: 1.05)),
+                                  child: _buildMeaningCell(
+                                    key: key,
+                                    vIndex: vIndex,
+                                    validMeanings: validMeanings,
                                   ),
                                 );
-                              }
-
-                              return Container(
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(
-                                      color: Colors.black26,
-                                      width: mIndex == validMeanings.length - 1 ? 0 : 0.5,
-                                    ),
-                                  ),
-                                ),
-                                child: _buildMeaningDropTargetCell(
-                                  key: key,
-                                  vIndex: vIndex,
-                                  validMeanings: validMeanings,
-                                ),
-                              );
-                            }),
-                          );
-                        }),
-                      ],
-                    ),
-                  ],
+                              }),
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const Divider(height: 1, color: Colors.black26),
-          // 下部：ピース置き場
-          Container(
-            height: 110,
-            color: const Color(0xFF2B2B2B),
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(left: 12, bottom: 4),
-                  child: Text(
-                    '【 ピース 】 ドラッグして正しい位置に配置してください（違ったら戻ります）',
-                    style: TextStyle(color: Colors.white, fontSize: 11),
+            const Divider(height: 1, color: Colors.black26),
+            // 下部：ピース置き場（余白を追加）
+            Container(
+              height: 115,
+              color: const Color(0xFF2B2B2B),
+              padding: const EdgeInsets.only(top: 8, bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(left: 12, bottom: 6),
+                    child: Text(
+                      '【 ピース 】 タップで選択して、配置したいマスをタップしてください',
+                      style: TextStyle(color: Colors.white, fontSize: 11),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _remainingPieces.length,
-                    itemBuilder: (context, index) {
-                      String piece = _remainingPieces[index];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        child: Draggable<String>(
-                          data: piece,
-                          feedback: Material(
-                            color: Colors.transparent,
-                            child: _buildPieceWidget(piece, isDragging: true),
+                  Expanded(
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _remainingPieces.length,
+                      itemBuilder: (context, index) {
+                        String piece = _remainingPieces[index];
+                        bool isSelected = (_selectedPieceIndex == index);
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                if (isSelected) {
+                                  _selectedPiece = null;
+                                  _selectedPieceIndex = null;
+                                } else {
+                                  _selectedPiece = piece;
+                                  _selectedPieceIndex = index;
+                                }
+                              });
+                            },
+                            child: _buildPieceWidget(piece, isSelected: isSelected),
                           ),
-                          childWhenDragging: Opacity(
-                            opacity: 0.3,
-                            child: _buildPieceWidget(piece),
-                          ),
-                          child: _buildPieceWidget(piece),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            // --------------------------------------------------
+            // ★ 広告表示エリア & 下部セーフエリア余白
+            // --------------------------------------------------
+            Container(
+              width: double.infinity,
+              height: 50,
+              color: const Color(0xFFE0E0E0),
+              alignment: Alignment.center,
+              child: const Text(
+                'スポンサーリンク / 広告エリア',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12), // iPadホームバー誤作動防止のための余白
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildFormDropTargetCell({
+  Widget _buildFormCell({
     required String key,
     required String correctVal,
   }) {
     String? placed = _userAnswers[key];
     bool isCorrect = (placed == correctVal);
 
-    return DragTarget<String>(
-      onAcceptWithDetails: (details) {
-        String draggedPiece = details.data;
-
-        if (draggedPiece == correctVal) {
-          setState(() {
-            _userAnswers[key] = draggedPiece;
-            _remainingPieces.remove(draggedPiece);
-          });
-          _checkCompletion();
-        } else {
-          _showWrongFeedback();
-        }
-      },
-      builder: (context, candidateData, rejectedData) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          constraints: const BoxConstraints(minHeight: 65),
-          color: isCorrect
-              ? Colors.lightGreen.shade200
-              : (candidateData.isNotEmpty ? Colors.amber.shade100 : Colors.white),
-          child: Center(
-            child: placed != null
-                ? Text(
-                    _toVerticalText(placed),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                      color: isCorrect ? Colors.green.shade900 : Colors.black,
-                      height: 1.05,
-                    ),
-                  )
-                : const Text('・', style: TextStyle(color: Colors.grey)),
-          ),
-        );
-      },
+    return InkWell(
+      onTap: placed == null
+          ? () => _onTapFormCell(key: key, correctVal: correctVal)
+          : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        constraints: const BoxConstraints(minHeight: 65),
+        color: isCorrect ? Colors.lightGreen.shade200 : Colors.white,
+        child: Center(
+          child: placed != null
+              ? Text(
+                  _toVerticalText(placed),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                    color: Colors.green.shade900,
+                    height: 1.05,
+                  ),
+                )
+              : const Text('・', style: TextStyle(color: Colors.grey)),
+        ),
+      ),
     );
   }
 
-  Widget _buildMeaningDropTargetCell({
+  Widget _buildMeaningCell({
     required String key,
     required int vIndex,
     required List<String> validMeanings,
@@ -379,58 +449,32 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
     String? placed = _userAnswers[key];
     bool isCorrect = placed != null && validMeanings.contains(placed);
 
-    return DragTarget<String>(
-      onAcceptWithDetails: (details) {
-        String draggedPiece = details.data;
-
-        List<String?> currentPlacedList = List.generate(
-          validMeanings.length,
-          (i) => _userAnswers['meaning_${vIndex}_$i'],
-        );
-
-        if (validMeanings.contains(draggedPiece) &&
-            !currentPlacedList.contains(draggedPiece)) {
-          setState(() {
-            _userAnswers[key] = draggedPiece;
-            _remainingPieces.remove(draggedPiece);
-          });
-          _checkCompletion();
-        } else {
-          _showWrongFeedback();
-        }
-      },
-      builder: (context, candidateData, rejectedData) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          constraints: const BoxConstraints(minHeight: 65),
-          color: isCorrect
-              ? Colors.lightGreen.shade200
-              : (candidateData.isNotEmpty ? Colors.amber.shade100 : Colors.white),
-          child: Center(
-            child: placed != null
-                ? Text(
-                    _toVerticalText(placed),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                      color: isCorrect ? Colors.green.shade900 : Colors.black,
-                      height: 1.05,
-                    ),
-                  )
-                : const Text('・', style: TextStyle(color: Colors.grey)),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showWrongFeedback() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('違います！正しい場所へ配置してください'),
-        duration: Duration(milliseconds: 600),
-        backgroundColor: Colors.redAccent,
+    return InkWell(
+      onTap: placed == null
+          ? () => _onTapMeaningCell(
+                key: key,
+                vIndex: vIndex,
+                validMeanings: validMeanings,
+              )
+          : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        constraints: const BoxConstraints(minHeight: 65),
+        color: isCorrect ? Colors.lightGreen.shade200 : Colors.white,
+        child: Center(
+          child: placed != null
+              ? Text(
+                  _toVerticalText(placed),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                    color: Colors.green.shade900,
+                    height: 1.05,
+                  ),
+                )
+              : const Text('・', style: TextStyle(color: Colors.grey)),
+        ),
       ),
     );
   }
@@ -453,16 +497,29 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
     );
   }
 
-  Widget _buildPieceWidget(String text, {bool isDragging = false}) {
+  Widget _buildPieceWidget(String text, {bool isSelected = false}) {
     bool isMultiLine = text.contains('\n');
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
       width: isMultiLine ? 56 : 42,
       height: 72,
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
       decoration: BoxDecoration(
-        color: isDragging ? const Color(0xFFC84B31) : const Color(0xFFF7F5EC),
-        border: Border.all(color: Colors.black),
-        borderRadius: BorderRadius.circular(4),
+        color: isSelected ? const Color(0xFFC84B31) : const Color(0xFFF7F5EC),
+        border: Border.all(
+          color: isSelected ? Colors.redAccent : Colors.black,
+          width: isSelected ? 2.5 : 1.0,
+        ),
+        borderRadius: BorderRadius.circular(6),
+        boxShadow: isSelected
+            ? [
+                const BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                )
+              ]
+            : null,
       ),
       child: Center(
         child: Text(
@@ -471,7 +528,7 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
           style: TextStyle(
             fontSize: isMultiLine ? 9.5 : 12.5,
             fontWeight: FontWeight.bold,
-            color: isDragging ? Colors.white : Colors.black,
+            color: isSelected ? Colors.white : Colors.black,
             height: 1.05,
           ),
         ),
