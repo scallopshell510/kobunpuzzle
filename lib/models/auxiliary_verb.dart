@@ -76,7 +76,7 @@ final List<AuxiliaryVerb> allVerbs = [
   ),
   AuxiliaryVerb(
     connection: '未然形', base: 'まし', type: '特殊型',
-    forms: {'未然': 'まま\nしせ\n／か', '連用': '○', '終止': 'まし', '連体': 'まし', '已然': 'ましか', '命令': '○'},
+    forms: {'未然': 'まま\nしせ\nか／', '連用': '○', '終止': 'まし', '連体': 'まし', '已然': 'ましか', '命令': '○'},
     meanings: ['仮反\n想実', 'のた\n意め\n思ら\n い', '能実\nな現\n願不\n望可', '推量'],
   ),
   AuxiliaryVerb(
