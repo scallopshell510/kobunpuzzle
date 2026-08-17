@@ -60,6 +60,70 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
     });
   }
 
+  void _checkCompletion() {
+    if (_remainingPieces.isEmpty) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (!mounted) return;
+        _showSuccessDialog();
+      });
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Column(
+            children: [
+              Text('🎉', style: TextStyle(fontSize: 40)),
+              SizedBox(height: 8),
+              Text(
+                'おめでとうございます！',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Text(
+            '選択した ${widget.verbs.length} 種の助動詞パズルをすべて正解しました！',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14),
+          ),
+          actionsAlignment: MainAxisAlignment.spaceEvenly,
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2B2B2B),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _initGameData();
+              },
+              child: const Text('もう一度遊ぶ'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFC84B31),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+              child: const Text('範囲選択へ戻る'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String _toVerticalText(String text) {
     if (text.contains('\n')) {
       return text;
@@ -276,6 +340,7 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
             _userAnswers[key] = draggedPiece;
             _remainingPieces.remove(draggedPiece);
           });
+          _checkCompletion();
         } else {
           _showWrongFeedback();
         }
@@ -329,6 +394,7 @@ class _FullPuzzleScreenState extends State<FullPuzzleScreen> {
             _userAnswers[key] = draggedPiece;
             _remainingPieces.remove(draggedPiece);
           });
+          _checkCompletion();
         } else {
           _showWrongFeedback();
         }
